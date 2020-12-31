@@ -11,7 +11,16 @@ Tic Tac Toe Player
                       Optimized winning rate - implementing minimax algorithm
                         
     Remaining Tasks: 1. optimize running time for minimax - alpha beta pruning
-"""                   
+
+12/31/2020  Jenny Cao   Version 1.2
+    Current Progress: Fixed error: in minimax, calling helper functions max or min should correspond to the next move.
+                                   In the previous version, minimax has already performed max or min in selecting best-value,
+                                   but instead called min or max again, causing moves not optimized
+                      Optimized winning rate - included counting depth to calculate overall score
+
+    Remaining Tasks: 1. optimize running time for minimax - alpha beta pruning
+
+"""
 
 import math
 import copy
@@ -21,6 +30,7 @@ O = "O"
 EMPTY = None
 
 PlayerRecord = None
+
 
 def initial_state():
     """
@@ -33,27 +43,26 @@ def initial_state():
 
 def player(board):
     """
-    Returns player who has the next turn on a board.
+    Returns player_info who has the next turn on a board.
     """
     x_num = 0
     o_num = 0
 
     for rows in board:
         for x in rows:
-            if x != EMPTY: 
+            if x != EMPTY:
                 if x == X:
                     x_num += 1
                 else:
                     o_num += 1
-    
 
-   # x_num = board.count(X)
-    #o_num = board.count(O)
+    # x_num = board.count(X)
+    # o_num = board.count(O)
 
-    if(x_num > o_num):
-         return O
+    if x_num > o_num:
+        return O
     else:
-         return X
+        return X
     raise NotImplementedError
 
 
@@ -79,7 +88,7 @@ def result(board, action):
     Returns the board that results from making move (i, j) on the board.
     """
 
-    if(len(action) != 2):
+    if len(action) != 2:
         raise ValueError('Incorrect form of action')
 
     row = action[0]
@@ -87,8 +96,8 @@ def result(board, action):
 
     board_copy = copy.deepcopy(board)
 
-    if(board_copy[row][col] != EMPTY):
-         raise ValueError('Invalid action')
+    if board_copy[row][col] != EMPTY:
+        raise ValueError('Invalid action')
 
     board_copy[row][col] = player(board_copy)
 
@@ -108,10 +117,10 @@ def winner(board):
 
     for x in range(3):
         if board[0][x] == board[1][x] == board[2][x]:
-             return board[0][x]
+            return board[0][x]
 
     if board[0][0] == board[1][1] == board[2][2]: return board[0][0]
-    
+
     if board[0][2] == board[1][1] == board[2][0]: return board[0][2]
 
     return None
@@ -128,7 +137,7 @@ def terminal(board):
 
     for rows in board:
         for x in rows:
-            if x == EMPTY: 
+            if x == EMPTY:
                 return False
     return True
     raise NotImplementedError
@@ -139,7 +148,6 @@ def utility(board):
     Returns 1 if X has won the game, -1 if O has won, 0 otherwise.
     """
 
-   
     if winner(board) == X:
         return 1
     elif winner(board) == O:
@@ -147,90 +155,105 @@ def utility(board):
     else:
         return 0
 
-
     raise NotImplementedError
 
 
 def minimax(board):
     """
-    Returns the optimal action for the current player on the board.
+    Returns the optimal action for the current player_info on the board.
     """
 
-    if terminal(board) == True:
+    if terminal(board):
         return None
 
+    if check_null(board):
+        return [1, 1]
 
-    if checkNull(board) == True:
-        return [1,1]
+    current_player = player(board)
+    depth = 0
+    all_action = actions(board)
+    best_action = all_action[0]
 
-    allAction = actions(board)
-    best_value = max_value(result(board, allAction[0]))
-    best_action = allAction[0]
-    if player(board) == X:
-        for a in allAction:
-            current_value = max_value(result(board, a))
+    if player == X:
+
+        best_value = min_value(current_player, result(board, all_action[0]), depth)
+
+        for a in all_action:
+            depth = 0
+            current_value = min_value(current_player, result(board, a), depth)
+
             if current_value > best_value:
                 best_value = current_value
                 best_action = a
+
         return best_action
+
     else:
-        for a in allAction:
-            current_value = min_value(result(board, a))
+
+        best_value = max_value(current_player, result(board, all_action[0]), depth)
+
+        for a in all_action:
+            depth = 0
+            current_value = max_value(current_player, result(board, a), depth)
+
             if current_value < best_value:
                 best_value = current_value
                 best_action = a
+
         return best_action
-
-
-    '''
-    if len(record_X) != 0:
-        return record_X[0]
-    elif len(record_0) != 0:
-        return record_0[0]
-    else:
-        return record_O[0]
-    '''
 
     raise NotImplementedError
 
-def checkNull(board):
+
+def check_null(board):
     for rows in range(3):
         for x in range(3):
             if board[rows][x] != EMPTY:
                 return False
     return True
-'''
-def minimaxHelp(board, score, actionlist):
-    
-    
-        for row in range(len(actionlist)):
-            if terminal(result(board, actionlist[row])) == False:
-                curresult = result(board, actionlist[row])
-                minimaxHelp(curresult, score, actions(curresult)) 
 
-            else:
-                if utility(board) == 1:
-                    score[row] += 1
-                elif  utility(board) == 0:
-                    score[row] += 0
-                else:
-                    score[row] += -1
-'''
-def max_value(board):
+
+def score_check(player_info, board, depth):
+    """
+    calculate score: if player_info ended up winning or tie, the less steps it takes the better;
+                     if player_info ended up losing, the more steps if went through (put up a fight before giving up) the better
+    """
+    score = utility(board) * 10
+    if player_info == X:  # when player_info is X, we want score to be max
+        if score == -10:  # when player_info is X but O won
+            score = depth + score  # more steps it takes the better
+        else:  # when player_info is X and X won
+            score = score - depth  # less steps it takes the better
+    else:  # when player_info is O, we want score to be min
+        if score == 10:  # when player_info is O but X won
+            score = score - depth  # more steps it takes the better
+        else:  # when player_info is O and O won
+            score = depth + score  # less steps it takes the better
+    return score
+
+
+def max_value(player_info, board, depth):
+    depth += 1
     if terminal(board):
-        return utility(board)
+        score = score_check(player_info, board, depth)
+        return score
     v = float('-inf')
-   
+
     for act in actions(board):
-        v = max(v, min_value(result(board, act)))
-        
+        v = max(v, min_value(player_info, result(board, act), depth))
+
     return v
 
-def min_value(board):
+
+def min_value(player_info, board, depth):
+    depth += 1
     if terminal(board):
-        return utility(board)
+        score = score_check(player_info, board, depth)
+
+        return score
     v = float('inf')
 
     for act in actions(board):
-        v = min(v, max_value(result(board, act)))
+        v = min(v, max_value(player_info, result(board, act), depth))
+
     return v
