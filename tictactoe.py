@@ -1,5 +1,5 @@
 """
-Tic Tac Toe Player
+Tic Tac Toe Player, Project from CS50 Intro to AI course
 
 12/19/2020  Jenny Cao   Version 1.0
     Current Progress: Game is able to function without error. All methods have been implemented
@@ -20,6 +20,10 @@ Tic Tac Toe Player
 
     Remaining Tasks: 1. optimize running time for minimax - alpha beta pruning
 
+1/14/2021   Jenny Cao   Version 1.3
+    Current Progress: Implemented alpha-beta pruning, running time noticeably decreased.
+
+    Remaining Tasks: Currently none. Maybe code optimization to improve simplicity and/or readability.
 """
 
 import math
@@ -173,14 +177,16 @@ def minimax(board):
     depth = 0
     all_action = actions(board)
     best_action = all_action[0]
+    alpha = float("-inf")
+    beta = float("inf")
 
     if player == X:
 
-        best_value = min_value(current_player, result(board, all_action[0]), depth)
+        best_value = min_value(current_player, result(board, all_action[0]), depth, alpha, beta)
 
         for a in all_action:
             depth = 0
-            current_value = min_value(current_player, result(board, a), depth)
+            current_value = min_value(current_player, result(board, a), depth, alpha, beta)
 
             if current_value > best_value:
                 best_value = current_value
@@ -189,12 +195,11 @@ def minimax(board):
         return best_action
 
     else:
-
-        best_value = max_value(current_player, result(board, all_action[0]), depth)
+        best_value = max_value(current_player, result(board, all_action[0]), depth, alpha, beta)
 
         for a in all_action:
             depth = 0
-            current_value = max_value(current_player, result(board, a), depth)
+            current_value = max_value(current_player, result(board, a), depth, alpha, beta)
 
             if current_value < best_value:
                 best_value = current_value
@@ -232,7 +237,7 @@ def score_check(player_info, board, depth):
     return score
 
 
-def max_value(player_info, board, depth):
+def max_value(player_info, board, depth, alpha, beta):
     depth += 1
     if terminal(board):
         score = score_check(player_info, board, depth)
@@ -240,12 +245,14 @@ def max_value(player_info, board, depth):
     v = float('-inf')
 
     for act in actions(board):
-        v = max(v, min_value(player_info, result(board, act), depth))
-
+        v = max(v, min_value(player_info, result(board, act), depth, alpha, beta))
+        if v >= beta:
+            return v
+        alpha = max(alpha, v)
     return v
 
 
-def min_value(player_info, board, depth):
+def min_value(player_info, board, depth, alpha, beta):
     depth += 1
     if terminal(board):
         score = score_check(player_info, board, depth)
@@ -254,6 +261,8 @@ def min_value(player_info, board, depth):
     v = float('inf')
 
     for act in actions(board):
-        v = min(v, max_value(player_info, result(board, act), depth))
-
+        v = min(v, max_value(player_info, result(board, act), depth, alpha, beta))
+    if v <= alpha:
+        return v
+    beta = min(beta, v)
     return v
